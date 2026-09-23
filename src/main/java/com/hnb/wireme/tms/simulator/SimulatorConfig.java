@@ -37,4 +37,8 @@ final class SimulatorConfig {
     boolean getBool(String key, boolean defaultValue) {
         return Boolean.parseBoolean(get(key, String.valueOf(defaultValue)));
     }
+
+    double getDouble(String key, double defaultValue) {
+        return Double.parseDouble(get(key, String.valueOf(defaultValue)));
+    }
 }

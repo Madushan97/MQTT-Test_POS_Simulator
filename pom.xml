@@ -27,6 +27,13 @@
             <artifactId>gson</artifactId>
             <version>2.10.1</version>
         </dependency>
+        <!-- Same DB the TMS uses (read-only here): DEVICES/TERMINALS/MERCHANTS
+             joined directly, so the fleet gets real serialNo+IMEI pairs. -->
+        <dependency>
+            <groupId>com.oracle.database.jdbc</groupId>
+            <artifactId>ojdbc11</artifactId>
+            <version>23.7.0.25.01</version>
+        </dependency>
     </dependencies>
 
     <build>

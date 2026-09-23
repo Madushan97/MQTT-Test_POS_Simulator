@@ -8,16 +8,26 @@ import java.nio.file.StandardOpenOption;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 
-/** Terminal log: every line goes to the console and to logs/terminal-&lt;serial&gt;.log. */
+/** Plain-text log: every line goes to the console and to a file. */
 final class TerminalLog {
 
     private static final DateTimeFormatter TS = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS");
 
     private final Path file;
 
+    /** One log per simulated terminal: logs/terminal-&lt;serial&gt;.log (used by PosSimulator). */
     TerminalLog(Path dir, String serial) throws IOException {
-        Files.createDirectories(dir);
-        this.file = dir.resolve("terminal-" + serial + ".log");
+        this(dir.resolve("terminal-" + serial + ".log"));
+    }
+
+    private TerminalLog(Path file) throws IOException {
+        Files.createDirectories(file.getParent());
+        this.file = file;
+    }
+
+    /** One shared log for a whole fleet run, e.g. logs/fleet.log (used by FleetSimulator). */
+    static TerminalLog forFileName(Path dir, String fileName) throws IOException {
+        return new TerminalLog(dir.resolve(fileName));
     }
 
     Path file() {
