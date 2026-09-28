@@ -125,9 +125,14 @@ public final class FleetSimulator {
         int statusIntervalSec = cfg.getInt("status.interval.seconds", 30);
         scheduler.scheduleWithFixedDelay(this::statusTick, statusIntervalSec, statusIntervalSec, TimeUnit.SECONDS);
 
-        // First sale batch fires once the whole fleet has finished connecting.
-        long saleStartDelay = delay / 1000 + 5;
-        scheduler.scheduleWithFixedDelay(this::saleTick, saleStartDelay, saleIntervalSec, TimeUnit.SECONDS);
+        if (cfg.getBool("sale.enabled", false)) {
+            // First sale batch fires once the whole fleet has finished connecting.
+            long saleStartDelay = delay / 1000 + 5;
+            scheduler.scheduleWithFixedDelay(this::saleTick, saleStartDelay, saleIntervalSec, TimeUnit.SECONDS);
+            log.info("INIT", "sales enabled: first batch in ~" + saleStartDelay + "s, every " + saleIntervalSec + "s after");
+        } else {
+            log.info("INIT", "sales disabled (sale.enabled=false): MQTT register/ECHO only, no WireMe core calls");
+        }
 
         if (cfg.getBool("churn.enabled", true)) {
             long churnStartDelay = delay / 1000 + cfg.getInt("churn.start-delay-seconds", 180);
