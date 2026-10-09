@@ -31,7 +31,7 @@ final class DeviceStatusSeeder {
 
     private static final String ANY_STATUS_CODE_SQL = "SELECT STATUS_CODE FROM STATUS FETCH FIRST 1 ROWS ONLY";
 
-    private static final String SEED_SQL = """
+    static final String SEED_SQL = """
             INSERT INTO DEVICE_STATUS (DEVICE_ID, DEVICE_STATUS, LAST_UPDATED_TIME, CREATEDAT, UPDATEDAT)
             SELECT ?, ?, ?, ?, ? FROM DUAL
             WHERE NOT EXISTS (SELECT 1 FROM DEVICE_STATUS WHERE DEVICE_ID = ?)

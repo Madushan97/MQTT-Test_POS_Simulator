@@ -53,40 +53,16 @@ final class CoreSaleClient {
     record SaleResult(boolean ok, int httpStatus, String requestJson, String body, String error) {
     }
 
+    /** The parts of a sale a caller may vary; everything else is generated per request. */
+    record SaleSpec(String transType, long amount, long tipAmount, String currency, String cardLabel,
+                    String paymentMode, String entryMode, String pan, String expDate) {
+    }
+
     SaleResult sendSale(String serialNo, String terminalId, String merchantId, double lat, double lng) {
-        Map<String, Object> body = new LinkedHashMap<>();
-        body.put("originId", hex64());
-        body.put("uniqueId", UUID.randomUUID().toString());
-        body.put("paymentMode", "card");
-        body.put("transType", "sale");
-        body.put("deviceSerialNo", serialNo);
-        body.put("terminalId", terminalId);
-        body.put("merchantId", merchantId);
-        body.put("amount", amountMin + random.nextLong(Math.max(1, amountMax - amountMin + 1)));
-        body.put("tipAmount", 0);
-        body.put("currency", currency);
-        body.put("pan", "532016XXXXXX1166"); // synthetic masked test PAN — not a real card
-        body.put("expDate", "2701");
-        body.put("nii", "004");
-        body.put("entryMode", "tap");
-        body.put("isDccTransaction", false);
-        body.put("cardLabel", "master");
-        body.put("traceNo", 1 + random.nextInt(9000));
-        body.put("invoiceNo", 1 + random.nextInt(9000));
-        int batchNo = 1 + random.nextInt(99);
-        body.put("batchNo", batchNo);
-        LocalDateTime now = LocalDateTime.now();
-        String coreDateTime = now.format(CORE_DATETIME);
-        body.put("batchKey", batchNo + "_" + LocalDate.now() + "-" + coreDateTime);
-        body.put("dateTime", coreDateTime);
-        body.put("rrn", String.valueOf(100000000000L + random.nextLong(900000000L)));
-        body.put("authCode", "AB" + (1000 + random.nextInt(9000)));
-        body.put("signData", null);
-        body.put("custMobile", null);
-        body.put("email", null);
-        body.put("contactNo", null);
-        body.put("lat", lat);
-        body.put("lng", lng);
+        long amount = amountMin + random.nextLong(Math.max(1, amountMax - amountMin + 1));
+        // synthetic masked test PAN — not a real card
+        SaleSpec spec = new SaleSpec("sale", amount, 0, currency, "master", "card", "tap", "532016XXXXXX1166", "2701");
+        Map<String, Object> body = saleBody(serialNo, terminalId, merchantId, lat, lng, spec, random);
 
         String json = gson.toJson(body);
         HttpRequest request = HttpRequest.newBuilder(URI.create(url))
@@ -116,11 +92,53 @@ final class CoreSaleClient {
         return new SaleResult(false, -1, json, null, "unreachable");
     }
 
+    /**
+     * One core transaction body. Ids (originId, uniqueId, trace/invoice/batch numbers, rrn, authCode)
+     * and the timestamp are fresh on every call, so each body is a distinct transaction.
+     */
+    static Map<String, Object> saleBody(String serialNo, String terminalId, String merchantId, double lat, double lng,
+                                        SaleSpec spec, SecureRandom random) {
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("originId", hex64(random));
+        body.put("uniqueId", UUID.randomUUID().toString());
+        body.put("paymentMode", spec.paymentMode());
+        body.put("transType", spec.transType());
+        body.put("deviceSerialNo", serialNo);
+        body.put("terminalId", terminalId);
+        body.put("merchantId", merchantId);
+        body.put("amount", spec.amount());
+        body.put("tipAmount", spec.tipAmount());
+        body.put("currency", spec.currency());
+        body.put("pan", spec.pan());
+        body.put("expDate", spec.expDate());
+        body.put("nii", "004");
+        body.put("entryMode", spec.entryMode());
+        body.put("isDccTransaction", false);
+        body.put("cardLabel", spec.cardLabel());
+        body.put("traceNo", 1 + random.nextInt(9000));
+        body.put("invoiceNo", 1 + random.nextInt(9000));
+        int batchNo = 1 + random.nextInt(99);
+        body.put("batchNo", batchNo);
+        LocalDateTime now = LocalDateTime.now();
+        String coreDateTime = now.format(CORE_DATETIME);
+        body.put("batchKey", batchNo + "_" + LocalDate.now() + "-" + coreDateTime);
+        body.put("dateTime", coreDateTime);
+        body.put("rrn", String.valueOf(100000000000L + random.nextLong(900000000L)));
+        body.put("authCode", "AB" + (1000 + random.nextInt(9000)));
+        body.put("signData", null);
+        body.put("custMobile", null);
+        body.put("email", null);
+        body.put("contactNo", null);
+        body.put("lat", lat);
+        body.put("lng", lng);
+        return body;
+    }
+
     private String truncate(String s) {
         return s == null ? "" : s.length() > 300 ? s.substring(0, 300) + "..." : s;
     }
 
-    private String hex64() {
+    private static String hex64(SecureRandom random) {
         byte[] bytes = new byte[32];
         random.nextBytes(bytes);
         StringBuilder sb = new StringBuilder(64);

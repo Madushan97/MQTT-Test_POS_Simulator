@@ -1,11 +1,58 @@
 # TMS POS MQTT Simulator
 
 Java simulator of a POS terminal for the TMS push channel (`PushDeviceMqttListener`).
-Two tools live here:
+The tools here:
 
-- **`PosSimulator`** — one terminal, interactive, for debugging a single device (below).
-- **`FleetSimulator`** — ~50-100 real devices at once, with churn, for exercising Fleet
+- **`SimulatorApp`**: desktop UI and the jar's default entry point (see [Desktop UI](#desktop-ui)).
+- **`PosSimulator`**: one terminal, console only, for debugging a single device (below).
+- **`FleetSimulator`**: ~50-100 real devices at once, with churn, for exercising Fleet
   Overview / Dormancy / Merchant Feedback together (see [Fleet Simulator](#fleet-simulator)).
+
+## Desktop UI
+
+```bash
+mvn package
+java -jar target/pos-simulator.jar        # defaults from ./config.properties + ./fleet-config.properties
+java -jar target/pos-simulator.jar my-config.properties my-fleet-config.properties
+```
+
+There is one tab per feature. Each tab has a form on the left, which fills the request editor, and
+the same request/response view on the right:
+
+- **Request to send**: method, URL (or MQTT topic), headers (`Key: Value` per line) and payload,
+  all editable. Whatever is in the editor when you press **Send** is exactly what goes out.
+- **History**: newest first. Green means OK, red means failed, amber means still waiting. For the
+  selected entry it shows the request as sent and the response as received: status, time, headers
+  and body. **Copy to compose** loads an old request back into the editor so you can resend it.
+
+| Tab | What it does |
+|---|---|
+| Single terminal | MQTT connect / register / ECHO / confirm for one device. Each publish's "response" is the TMS's reply on the matching topic (`create/ack`, `message/response`, `update/confirm/ack`). If no reply arrives within 15 s, the publish is marked `NO REPLY`. Pushed commands appear as `RECEIVE` entries and are auto-confirmed (SUCCESS/FAIL selectable). |
+| Bulk fleet | Many devices at once, either random active devices from the DB (same query as `FleetSimulator`) or a pasted `serial,imei,tid,mid` list. One row per device; select a row to see that device's history. **Show fleet log** shows the DB statements (SELECT, and the optional DEVICE_STATUS seed INSERT) with their results. |
+| Sale | `POST core.sale-url` with editable type, amount, card label, payment and entry mode, PAN/expiry, and approved/declined. Accepted sales are offered as the **Original** for a void/precomp. |
+| Hardware failures | Load the code catalogue (GET), report failures (POST: one, or N random codes), and list stored failures (GET). Only serial + code are sent unless you tick the tid/mid box. |
+| Push notifications | The whole push round trip. **1.** Queue an operation (`MSG`, `DIN`, `LOG`, `BNR`, `SET`, `ACTV`, `INT`) with `POST push/push-operations/create`, or `/create/bulk` by terminal/device/merchant/MCC/partner ids. **2.** **Poll now** sends an ECHO; the TMS delivers the oldest PEND operation in the reply. Delivered operations are listed, and with **Confirm manually** ticked you can answer each one with SUCCESS (→ COMP) or FAIL (→ FAIL). **3.** List the device's operations and the jobs to check the status. The device side uses the Single terminal tab's connection. |
+
+Push notes, from the TMS code:
+- **Delivery is by ECHO reply only.** `PushMessageManagementServiceImpl.sendMessageToSpecificDevice` would publish on `/commands`, but nothing calls it.
+- **A confirm marks the device's oldest PEND operation**, whatever `operationCode` the confirm carries.
+- **The device must be registered first.** A device that never registered over MQTT gets the operation stored as `NOT_REGISTERED`, and it is never delivered.
+- **Complete / Ignore buttons:** under the response panel. They act as the POS: ECHO to pull the oldest PEND operation, confirm it `SUCCESS` (→ `COMP`) or `FAIL` (→ `FAIL`), then re-read the device's operations. If the Single terminal tab isn't connected as that device, the buttons open their own connection for it.
+- **TMS bugs this tab found, both fixed in the TMS repo (need a TMS restart):**
+  - `create` returned HTTP 500 "Query did not return a unique result" for a device with several TERMINALS rows (`TerminalRepository` lookups now skip deleted rows and take the newest).
+  - Operations queued for a device whose `PUSH_DEVICE.PUSH_ID` is not its serial (e.g. rows left by the old push service) stayed `PEND` forever: the queue used DEVICES.ID, but delivery and confirm used `PUSH_ID`. All three now go through `PushDeviceResolver`.
+
+**Sale-tab assumptions, unverified because no WireMe core API spec was available.** Check the
+payload before sending:
+- `transType` choices are the values the TMS code names (`sale`, `void-sale`, `preauth`,
+  `precomp`, `void-installment`, `offline`). The field also accepts any other text.
+- **Declined** adds `respCode`. `FAILEDTRANSACTIONS` has a `RESPCODE` column, but it is not
+  confirmed that core files a request with one there.
+- Void/precomp add `oriTransType`, `oriTraceNo`, `oriBatchNo`, `oriDateTime`, `oriRrn` and
+  `oriAuthCode`, named after the `TRANSACTIONS.ORI*` columns.
+
+The sale endpoint in `fleet-config.properties` is the shared UAT core, so a sent sale creates a
+real UAT transaction.
 
 ## Broker
 
@@ -26,13 +73,13 @@ Point your local TMS's `tms.push.mqtt.broker-url` (`PUSH_MQTT_BROKER_URL`) at th
 > clears it; `net stop winnat && net start winnat` from an elevated PowerShell usually does too,
 > without a reboot.
 
-## Run (single terminal)
+## Run (single terminal, console)
 
 ```bash
 mvn package
-java -jar target/pos-simulator.jar                 # uses ./config.properties
-java -jar target/pos-simulator.jar other.properties
-java -Dterminal.serial-number=SN0002 -jar target/pos-simulator.jar   # override one key
+java -cp target/pos-simulator.jar com.hnb.wireme.tms.simulator.PosSimulator                    # uses ./config.properties
+java -cp target/pos-simulator.jar com.hnb.wireme.tms.simulator.PosSimulator other.properties
+java -Dterminal.serial-number=SN0002 -cp target/pos-simulator.jar com.hnb.wireme.tms.simulator.PosSimulator   # override one key
 ```
 
 Edit `config.properties` to change serial number, IMEI, merchantId, terminalId, broker, topic prefix, intervals.
@@ -61,6 +108,32 @@ MQTT-level keep-alive (PINGREQ/PINGRESP every `keepalive.seconds`) is done by th
 shows up as `CONNECTION LOST`.
 
 Console commands while running: `status`, `echo`, `register`, `din`, `disconnect`, `connect`, `quit`.
+
+## Hardware failures
+
+The TMS takes hardware failures over **REST, not MQTT**:
+`POST {tms.base-url}/advanced-insights/tms/hardware-failure-transactions`. The simulator only sends
+codes it got from `GET .../hardware-failure-error-codes?category=HARDWARE_FAILURES` (the
+`ADVANCED_INSIGHTS_FAILURE_ERROR_CODES` table). It never makes codes up. If that list comes back
+empty, it sends nothing. By default the body is just `deviceSerial` (`terminal.serial-number`) and
+`errorCode`, like a real POS request, so the server stores `TERMINAL_ID` / `MERCHANT_ID` as null.
+Set `hwfail.send-tid-mid=true` to also send `terminal-id` / `merchant-id`.
+
+Console commands in `PosSimulator` (these work while the broker is down too):
+
+- `codes`: reload and print the catalogue
+- `fail`: one random code · `fail 5`: five random codes · `fail E0201`: that exact code (a
+  code that isn't in the catalogue is still sent, with a warning, to test how the server handles it)
+- `fails`: `GET .../hardware-failure-transactions?deviceSerial=<serial>`. Prints the total, the
+  per-code `errorCodeCounts` and the 10 newest rows
+
+Set `hwfail.auto-interval.seconds=N` to report one random failure every N seconds.
+
+One-shot run with no broker (load codes → POST N → GET to read them back; exits non-zero on failure):
+
+```bash
+java -cp target/pos-simulator.jar com.hnb.wireme.tms.simulator.HardwareFailureSender config.properties 5
+```
 
 ## Notes
 

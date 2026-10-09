@@ -39,7 +39,7 @@ final class DeviceDbClient {
                      Double lat, Double lng) {
     }
 
-    private static final String SQL = """
+    static final String SQL = """
             SELECT DEVICE_ID, SERIALNO, EMINO, TERMINALID, MERCHANTID, LAT, LNG FROM (
                 SELECT d.ID AS DEVICE_ID, d.SERIALNO, d.EMINO, t.TERMINALID, m.MERCHANTID, m.LAT, m.LNG,
                        ROW_NUMBER() OVER (PARTITION BY d.ID ORDER BY t.ID) AS RN

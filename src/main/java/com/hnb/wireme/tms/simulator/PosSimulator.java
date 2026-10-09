@@ -64,6 +64,10 @@ public final class PosSimulator implements MqttCallbackExtended {
     private final int echoIntervalSec;
     private final int statusIntervalSec;
     private final String confirmStatus;
+    private final HardwareFailureClient hwClient;
+    private final String hwCategory;
+    private final int hwAutoIntervalSec;
+    private final boolean hwSendTidMid;
 
     private final TerminalLog log;
     private final MqttClient client;
@@ -84,6 +88,9 @@ public final class PosSimulator implements MqttCallbackExtended {
     private volatile Instant connectedAt;
     private volatile Instant lastPongAt;
     private volatile boolean registered;
+    /** Loaded from the TMS on first use, then reused; `codes` reloads it. */
+    private volatile List<HardwareFailureClient.ErrorCode> hwErrorCodes;
+    private final java.util.Random random = new java.util.Random();
 
     private PosSimulator(SimulatorConfig cfg) throws Exception {
         serial = cfg.require("terminal.serial-number");
@@ -103,8 +110,12 @@ public final class PosSimulator implements MqttCallbackExtended {
         echoIntervalSec = cfg.getInt("echo.interval.seconds", 10);
         statusIntervalSec = cfg.getInt("status.interval.seconds", 30);
         confirmStatus = cfg.get("command.confirm-status", "SUCCESS");
+        hwClient = new HardwareFailureClient(cfg.get("tms.base-url", "http://localhost:8081/api/v1"));
+        hwCategory = cfg.get("hwfail.category", "HARDWARE_FAILURES");
+        hwAutoIntervalSec = cfg.getInt("hwfail.auto-interval.seconds", 0);
+        hwSendTidMid = cfg.getBool("hwfail.send-tid-mid", false);
 
-        log = new TerminalLog(Path.of(cfg.get("log.dir", "logs")), serial);
+        log =new TerminalLog(Path.of(cfg.get("log.dir", "logs")), serial);
         client = new MqttClient(brokerUrl, "pos-sim-" + serial, new MemoryPersistence());
         client.setCallback(this);
     }
@@ -133,8 +144,17 @@ public final class PosSimulator implements MqttCallbackExtended {
         Runtime.getRuntime().addShutdownHook(new Thread(this::shutdown, "pos-shutdown"));
         scheduler.scheduleWithFixedDelay(this::echoTick, echoIntervalSec, echoIntervalSec, TimeUnit.SECONDS);
         scheduler.scheduleWithFixedDelay(this::statusTick, statusIntervalSec, statusIntervalSec, TimeUnit.SECONDS);
+        log.info("INIT", "hardware failures -> " + hwClient.base() + " (category=" + hwCategory + ", auto every "
+                + (hwAutoIntervalSec > 0 ? hwAutoIntervalSec + "s" : "- off") + ", tid/mid "
+                + (hwSendTidMid ? "sent" : "omitted") + ")");
+        if (hwAutoIntervalSec > 0) {
+            scheduler.scheduleWithFixedDelay(() -> sendHardwareFailures(null, 1),
+                    hwAutoIntervalSec, hwAutoIntervalSec, TimeUnit.SECONDS);
+        }
 
-        connectWithRetry();
+        // Console first, broker in the background: the hardware-failure commands are plain HTTP and
+        // must stay usable even while the broker is down.
+        new Thread(this::connectWithRetry, "pos-connect").start();
         consoleLoop();
     }
 
@@ -437,11 +457,27 @@ public final class PosSimulator implements MqttCallbackExtended {
     // ------------------------------------------------------------------ console
 
     private void consoleLoop() {
-        System.out.println("Console commands: status | echo | register | din | disconnect | connect | help | quit");
+        System.out.println("Console commands: " + HELP);
         Scanner in = new Scanner(System.in);
         while (in.hasNextLine()) {
-            String cmd = in.nextLine().trim().toLowerCase();
+            String[] parts = in.nextLine().trim().split("\\s+", 2);
+            String cmd = parts[0].toLowerCase();
+            String arg = parts.length > 1 ? parts[1].trim() : "";
             switch (cmd) {
+                case "codes" -> worker.submit(() -> {
+                    hwErrorCodes = null;
+                    showErrorCodes();
+                });
+                case "fail" -> {
+                    // fail -> 1 random code | fail 5 -> 5 random codes | fail E0201 -> that code
+                    if (arg.matches("\\d+")) {
+                        int n = Integer.parseInt(arg);
+                        worker.submit(() -> sendHardwareFailures(null, n));
+                    } else {
+                        worker.submit(() -> sendHardwareFailures(arg.isEmpty() ? null : arg.toUpperCase(), 1));
+                    }
+                }
+                case "fails" -> worker.submit(this::listHardwareFailures);
                 case "status" -> log.info("STATUS", livenessLine());
                 case "echo" -> worker.submit(this::sendEcho);
                 case "register" -> worker.submit(this::register);
@@ -461,7 +497,7 @@ public final class PosSimulator implements MqttCallbackExtended {
                 case "quit", "exit" -> {
                     System.exit(0);
                 }
-                case "", "help" -> System.out.println("status | echo | register | din | disconnect | connect | quit");
+                case "", "help" -> System.out.println(HELP);
                 default -> System.out.println("Unknown command: " + cmd);
             }
         }
@@ -471,6 +507,69 @@ public final class PosSimulator implements MqttCallbackExtended {
         } catch (InterruptedException ignored) {
             Thread.currentThread().interrupt();
         }
+    }
+
+    // ------------------------------------------------------------------ hardware failures (REST)
+
+    private static final String HELP = "status | echo | register | din | disconnect | connect"
+            + " | codes | fail [n|CODE] | fails | help | quit";
+
+    /** The catalogue from the TMS, or null (logged) if it can't be read or is empty. */
+    private List<HardwareFailureClient.ErrorCode> errorCodes() {
+        if (hwErrorCodes == null) {
+            try {
+                List<HardwareFailureClient.ErrorCode> codes = hwClient.fetchErrorCodes(hwCategory);
+                if (codes.isEmpty()) {
+                    log.error("HWFAIL", "TMS returned no error codes for category=" + hwCategory
+                            + " - nothing to send (no codes are invented)");
+                    return null;
+                }
+                hwErrorCodes = codes;
+                log.info("HWFAIL", "loaded " + codes.size() + " error codes (category=" + hwCategory + ")");
+            } catch (Exception e) {
+                log.error("HWFAIL", "cannot load error codes: " + e.getMessage());
+                return null;
+            }
+        }
+        return hwErrorCodes;
+    }
+
+    private void showErrorCodes() {
+        List<HardwareFailureClient.ErrorCode> codes = errorCodes();
+        if (codes == null) {
+            return;
+        }
+        for (HardwareFailureClient.ErrorCode c : codes) {
+            log.info("HWFAIL", String.format("  %-8s %-20s %-10s %s", c.code(), c.subCategory(), c.stage(), c.description()));
+        }
+    }
+
+    /** Reports `count` failures for this terminal: the given code, or random catalogue codes when null. */
+    private void sendHardwareFailures(String code, int count) {
+        List<HardwareFailureClient.ErrorCode> codes = errorCodes();
+        if (codes == null) {
+            return;
+        }
+        if (code != null && codes.stream().noneMatch(c -> code.equalsIgnoreCase(c.code()))) {
+            // Still sent: the server stores the code as given, so this is how to see what it does with
+            // an unknown one. Flagged so it isn't mistaken for a catalogue code.
+            log.warn("HWFAIL", code + " is not in the catalogue - sending anyway");
+        }
+        for (int i = 0; i < count; i++) {
+            String c = code != null ? code : codes.get(random.nextInt(codes.size())).code();
+            HardwareFailureClient.Result r = hwSendTidMid
+                    ? hwClient.report(serial, c, terminalId, merchantId)
+                    : hwClient.report(serial, c, null, null);
+            if (r.ok()) {
+                log.info("HWFAIL", "TX " + r.requestJson() + " -> HTTP " + r.httpStatus() + " " + r.body());
+            } else {
+                log.error("HWFAIL", "TX " + r.requestJson() + " -> " + HardwareFailureClient.describe(r));
+            }
+        }
+    }
+
+    private void listHardwareFailures() {
+        log.info("HWFAIL", "stored for serial=" + serial + ": " + hwClient.summarizeList(hwClient.list(serial, 10)));
     }
 
     // ------------------------------------------------------------------ helpers

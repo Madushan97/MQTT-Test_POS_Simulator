@@ -17,6 +17,18 @@ final class SimulatorConfig {
         }
     }
 
+    private SimulatorConfig() {
+    }
+
+    /** The file's settings, or only -D overrides and defaults when it is missing or unreadable (desktop UI). */
+    static SimulatorConfig loadOrEmpty(Path file) {
+        try {
+            return Files.exists(file) ? new SimulatorConfig(file) : new SimulatorConfig();
+        } catch (IOException e) {
+            return new SimulatorConfig();
+        }
+    }
+
     String get(String key, String defaultValue) {
         String v = System.getProperty(key, props.getProperty(key));
         return v == null || v.isBlank() ? defaultValue : v.trim();
