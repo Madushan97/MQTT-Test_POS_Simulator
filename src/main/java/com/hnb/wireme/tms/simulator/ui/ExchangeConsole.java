@@ -1,4 +1,9 @@
-package com.hnb.wireme.tms.simulator;
+package com.hnb.wireme.tms.simulator.ui;
+
+import com.hnb.wireme.tms.simulator.common.Exchange;
+import com.hnb.wireme.tms.simulator.common.ExchangeLog;
+import com.hnb.wireme.tms.simulator.common.HttpExchanger;
+import com.hnb.wireme.tms.simulator.common.Json;
 
 import javax.swing.BorderFactory;
 import javax.swing.DefaultListCellRenderer;
@@ -40,13 +45,13 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * Bottom: the history (newest first) and, for the selected entry, the request as sent and the
  * response as received: status, headers and body.
  */
-final class ExchangeConsole extends JPanel {
+public final class ExchangeConsole extends JPanel {
 
-    record Draft(String method, String url, Map<String, String> headers, String body) {
+    public record Draft(String method, String url, Map<String, String> headers, String body) {
     }
 
     /** Sends a draft and returns the recorded exchange; runs off the UI thread. */
-    interface Sender {
+    public interface Sender {
         Exchange send(Draft draft) throws Exception;
     }
 
@@ -84,7 +89,7 @@ final class ExchangeConsole extends JPanel {
     private ExchangeLog log;
     private Sender sender;
 
-    ExchangeConsole(ExchangeLog log, String... methods) {
+    public ExchangeConsole(ExchangeLog log, String... methods) {
         super(new BorderLayout());
         for (String m : methods) {
             methodBox.addItem(m);
@@ -190,12 +195,12 @@ final class ExchangeConsole extends JPanel {
 
     // ------------------------------------------------------------------ API for tabs
 
-    void setSender(Sender sender) {
+    public void setSender(Sender sender) {
         this.sender = sender;
     }
 
     /** A button under the response panel; the action gets the selected history entry (possibly null). */
-    void addResponseAction(String label, String tooltip, java.util.function.Consumer<Exchange> action) {
+    public void addResponseAction(String label, String tooltip, java.util.function.Consumer<Exchange> action) {
         JButton b = new JButton(label);
         b.setToolTipText(tooltip);
         b.addActionListener(e -> action.accept(list.getSelectedValue()));
@@ -204,7 +209,7 @@ final class ExchangeConsole extends JPanel {
     }
 
     /** Switch which history is shown (the bulk tab shows one device at a time). */
-    void setLog(ExchangeLog newLog) {
+    public void setLog(ExchangeLog newLog) {
         if (log != null) {
             log.removeListener(logListener);
         }
@@ -214,7 +219,7 @@ final class ExchangeConsole extends JPanel {
         refresh();
     }
 
-    void loadDraft(Draft d) {
+    public void loadDraft(Draft d) {
         methodBox.setSelectedItem(d.method());
         urlField.setText(d.url());
         composeHeaders.setText(HttpExchanger.formatHeaders(d.headers()));
@@ -223,7 +228,7 @@ final class ExchangeConsole extends JPanel {
     }
 
     /** Load into the editor and send straight away. */
-    void sendDraft(Draft d) {
+    public void sendDraft(Draft d) {
         loadDraft(d);
         sendCompose();
     }

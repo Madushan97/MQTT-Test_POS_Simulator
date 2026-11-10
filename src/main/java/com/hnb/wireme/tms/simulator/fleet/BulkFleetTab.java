@@ -1,4 +1,12 @@
-package com.hnb.wireme.tms.simulator;
+package com.hnb.wireme.tms.simulator.fleet;
+
+import com.hnb.wireme.tms.simulator.common.Exchange;
+import com.hnb.wireme.tms.simulator.common.ExchangeLog;
+import com.hnb.wireme.tms.simulator.common.TerminalLog;
+import com.hnb.wireme.tms.simulator.config.SimulatorConfig;
+import com.hnb.wireme.tms.simulator.mqtt.MqttTerminal;
+import com.hnb.wireme.tms.simulator.ui.ExchangeConsole;
+import com.hnb.wireme.tms.simulator.ui.FormPanel;
 
 import javax.swing.ButtonGroup;
 import javax.swing.JButton;
@@ -40,7 +48,7 @@ import java.util.function.Consumer;
  * FleetSimulator does) or from a pasted list. Each device keeps its own history; select a row to see
  * its requests and responses. The fleet log holds the DB statements and their results.
  */
-final class BulkFleetTab extends JPanel {
+public final class BulkFleetTab extends JPanel {
 
     private static final int PER_DEVICE_HISTORY = 100;
 
@@ -73,7 +81,7 @@ final class BulkFleetTab extends JPanel {
     private final JLabel summary = new JLabel(" ");
     private final JLabel showing = new JLabel("Showing: fleet log");
 
-    BulkFleetTab(SimulatorConfig fleetCfg, ScheduledExecutorService exec) {
+    public BulkFleetTab(SimulatorConfig fleetCfg, ScheduledExecutorService exec) {
         super(new BorderLayout());
         this.exec = exec;
         dbHost.setText(fleetCfg.get("db.host", ""));

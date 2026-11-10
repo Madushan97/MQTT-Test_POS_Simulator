@@ -1,4 +1,8 @@
-package com.hnb.wireme.tms.simulator;
+package com.hnb.wireme.tms.simulator.fleet;
+
+import com.hnb.wireme.tms.simulator.common.TerminalLog;
+import com.hnb.wireme.tms.simulator.config.SimulatorConfig;
+import com.hnb.wireme.tms.simulator.sale.CoreSaleClient;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -82,7 +86,7 @@ public final class FleetSimulator {
         Path cfgPath = Path.of(args.length > 0 ? args[0] : "fleet-config.properties");
         if (!Files.exists(cfgPath)) {
             System.err.println("Config file not found: " + cfgPath.toAbsolutePath()
-                    + "\nUsage: java -cp pos-simulator.jar com.hnb.wireme.tms.simulator.FleetSimulator [path/to/fleet-config.properties]");
+                    + "\nUsage: java -cp pos-simulator.jar com.hnb.wireme.tms.simulator.fleet.FleetSimulator [path/to/fleet-config.properties]");
             System.exit(1);
         }
         new FleetSimulator(new SimulatorConfig(cfgPath)).run();

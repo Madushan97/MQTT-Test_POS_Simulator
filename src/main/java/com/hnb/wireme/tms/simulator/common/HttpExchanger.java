@@ -1,4 +1,4 @@
-package com.hnb.wireme.tms.simulator;
+package com.hnb.wireme.tms.simulator.common;
 
 import java.io.IOException;
 import java.net.URI;
@@ -12,7 +12,7 @@ import java.util.Map;
 import java.util.Set;
 
 /** Sends one HTTP request exactly as composed in the UI and records it, with the full response, as an Exchange. */
-final class HttpExchanger {
+public final class HttpExchanger {
 
     /** Headers java.net.http sets itself and refuses from callers. */
     private static final Set<String> RESTRICTED = Set.of("connection", "content-length", "expect", "host", "upgrade");
@@ -20,7 +20,7 @@ final class HttpExchanger {
     private HttpExchanger() {
     }
 
-    static Exchange send(ExchangeLog log, String method, String url, Map<String, String> headers, String body) {
+    public static Exchange send(ExchangeLog log, String method, String url, Map<String, String> headers, String body) {
         Exchange ex = log.add(new Exchange(Exchange.Kind.HTTP, method.toUpperCase(), url, headers, body));
         HttpRequest request;
         try {
@@ -67,7 +67,7 @@ final class HttpExchanger {
     }
 
     /** "Key: Value" lines → ordered map (blank and malformed lines skipped). */
-    static Map<String, String> parseHeaders(String text) {
+    public static Map<String, String> parseHeaders(String text) {
         Map<String, String> headers = new LinkedHashMap<>();
         for (String line : text.split("\\R")) {
             int idx = line.indexOf(':');
@@ -78,7 +78,7 @@ final class HttpExchanger {
         return headers;
     }
 
-    static String formatHeaders(Map<String, String> headers) {
+    public static String formatHeaders(Map<String, String> headers) {
         StringBuilder sb = new StringBuilder();
         headers.forEach((k, v) -> sb.append(k).append(": ").append(v).append('\n'));
         return sb.toString();

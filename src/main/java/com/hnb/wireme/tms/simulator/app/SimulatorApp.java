@@ -1,4 +1,11 @@
-package com.hnb.wireme.tms.simulator;
+package com.hnb.wireme.tms.simulator.app;
+
+import com.hnb.wireme.tms.simulator.config.SimulatorConfig;
+import com.hnb.wireme.tms.simulator.fleet.BulkFleetTab;
+import com.hnb.wireme.tms.simulator.hardwarefailure.HardwareFailureTab;
+import com.hnb.wireme.tms.simulator.mqtt.PushNotificationTab;
+import com.hnb.wireme.tms.simulator.mqtt.SingleTerminalTab;
+import com.hnb.wireme.tms.simulator.sale.SaleTab;
 
 import javax.swing.JFrame;
 import javax.swing.JTabbedPane;

@@ -1,4 +1,10 @@
-package com.hnb.wireme.tms.simulator;
+package com.hnb.wireme.tms.simulator.mqtt;
+
+import com.hnb.wireme.tms.simulator.common.Exchange;
+import com.hnb.wireme.tms.simulator.common.ExchangeLog;
+import com.hnb.wireme.tms.simulator.config.SimulatorConfig;
+import com.hnb.wireme.tms.simulator.ui.ExchangeConsole;
+import com.hnb.wireme.tms.simulator.ui.FormPanel;
 
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
@@ -24,7 +30,7 @@ import java.util.concurrent.ScheduledExecutorService;
  * One terminal on the MQTT push channel: connect/disconnect, register, ECHO, confirm. Every publish
  * shows the TMS's reply as its response; pushed commands appear as RECEIVE entries.
  */
-final class SingleTerminalTab extends JPanel {
+public final class SingleTerminalTab extends JPanel {
 
     private final ScheduledExecutorService exec;
     private final ExchangeLog log = new ExchangeLog(500);
@@ -54,7 +60,7 @@ final class SingleTerminalTab extends JPanel {
     /** Re-attached to each new terminal created by Connect (the Push tab listens here). */
     private final List<MqttTerminal.OperationListener> operationListeners = new CopyOnWriteArrayList<>();
 
-    SingleTerminalTab(SimulatorConfig cfg, ScheduledExecutorService exec) {
+    public SingleTerminalTab(SimulatorConfig cfg, ScheduledExecutorService exec) {
         super(new BorderLayout());
         this.exec = exec;
         broker.setText(cfg.get("broker.url", "tcp://localhost:1883"));
@@ -158,7 +164,7 @@ final class SingleTerminalTab extends JPanel {
     }
 
     /** Current form values (also used by the Sale and Hardware tabs' "use Single terminal" buttons). */
-    MqttTerminal.Identity identity() {
+    public MqttTerminal.Identity identity() {
         return new MqttTerminal.Identity(serial.getText().trim(), imei.getText().trim(), tid.getText().trim(),
                 mid.getText().trim(), model.getText().trim(), firmware.getText().trim(), 6.9271, 79.8612);
     }

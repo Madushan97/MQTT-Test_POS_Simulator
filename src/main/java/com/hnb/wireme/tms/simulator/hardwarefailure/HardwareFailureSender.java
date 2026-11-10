@@ -1,4 +1,7 @@
-package com.hnb.wireme.tms.simulator;
+package com.hnb.wireme.tms.simulator.hardwarefailure;
+
+import com.hnb.wireme.tms.simulator.common.TerminalLog;
+import com.hnb.wireme.tms.simulator.config.SimulatorConfig;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -14,7 +17,7 @@ import java.util.Random;
  *
  * Terminal identity and tms.base-url come from the same config.properties PosSimulator uses.
  *
- *   java -cp target/pos-simulator.jar com.hnb.wireme.tms.simulator.HardwareFailureSender [config] [count]
+ *   java -cp target/pos-simulator.jar com.hnb.wireme.tms.simulator.hardwarefailure.HardwareFailureSender [config] [count]
  *
  * Exits non-zero if the catalogue can't be loaded or any POST fails.
  */

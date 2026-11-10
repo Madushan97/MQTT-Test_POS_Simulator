@@ -1,4 +1,13 @@
-package com.hnb.wireme.tms.simulator;
+package com.hnb.wireme.tms.simulator.sale;
+
+import com.hnb.wireme.tms.simulator.common.Exchange;
+import com.hnb.wireme.tms.simulator.common.ExchangeLog;
+import com.hnb.wireme.tms.simulator.common.HttpExchanger;
+import com.hnb.wireme.tms.simulator.common.Json;
+import com.hnb.wireme.tms.simulator.config.SimulatorConfig;
+import com.hnb.wireme.tms.simulator.mqtt.MqttTerminal;
+import com.hnb.wireme.tms.simulator.ui.ExchangeConsole;
+import com.hnb.wireme.tms.simulator.ui.FormPanel;
 
 import javax.swing.DefaultComboBoxModel;
 import javax.swing.JButton;
@@ -27,7 +36,7 @@ import java.util.function.Supplier;
  *    declined request there is not confirmed.
  *  - For void/precomp the ori* fields are named after the TRANSACTIONS ORI* columns.
  */
-final class SaleTab extends JPanel {
+public final class SaleTab extends JPanel {
 
     /** A sale accepted earlier in this session, offered as the original for a void/precomp. */
     private record Original(String transType, Object traceNo, Object batchNo, Object dateTime, Object rrn,
@@ -64,7 +73,7 @@ final class SaleTab extends JPanel {
     private final DefaultComboBoxModel<Object> originals = new DefaultComboBoxModel<>(new Object[]{NONE});
     private final JComboBox<Object> original = new JComboBox<>(originals);
 
-    SaleTab(SimulatorConfig singleCfg, SimulatorConfig fleetCfg, Supplier<MqttTerminal.Identity> singleIdentity) {
+    public SaleTab(SimulatorConfig singleCfg, SimulatorConfig fleetCfg, Supplier<MqttTerminal.Identity> singleIdentity) {
         super(new BorderLayout());
         url.setText(fleetCfg.get("core.sale-url", "http://localhost:28071/api/core/v1/transactions"));
         currency.setText(fleetCfg.get("core.currency", "LKR"));

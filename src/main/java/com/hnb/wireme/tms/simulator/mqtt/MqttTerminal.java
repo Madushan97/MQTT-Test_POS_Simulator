@@ -1,4 +1,8 @@
-package com.hnb.wireme.tms.simulator;
+package com.hnb.wireme.tms.simulator.mqtt;
+
+import com.hnb.wireme.tms.simulator.common.Exchange;
+import com.hnb.wireme.tms.simulator.common.ExchangeLog;
+import com.hnb.wireme.tms.simulator.common.Json;
 
 import org.eclipse.paho.client.mqttv3.IMqttDeliveryToken;
 import org.eclipse.paho.client.mqttv3.IMqttToken;
@@ -38,14 +42,14 @@ import java.util.concurrent.atomic.AtomicLong;
  * {@link #REPLY_TIMEOUT_SEC} marks the publish "NO REPLY". Messages nobody waited for (pushed
  * commands, late replies) are recorded as RECEIVE exchanges.
  */
-final class MqttTerminal implements MqttCallbackExtended {
+public final class MqttTerminal implements MqttCallbackExtended {
 
     static final String ECHO = "ECHO";
     static final String REG = "REG";
     static final String DIN = "DIN";
     private static final int REPLY_TIMEOUT_SEC = 15;
 
-    record Identity(String serial, String imei, String terminalId, String merchantId, String model,
+    public record Identity(String serial, String imei, String terminalId, String merchantId, String model,
                     String firmware, double lat, double lng) {
     }
 
@@ -54,8 +58,8 @@ final class MqttTerminal implements MqttCallbackExtended {
         void received(MqttTerminal terminal, String operationCode, Map<String, Object> params, String via);
     }
 
-    final Identity id;
-    final ExchangeLog log;
+    public final Identity id;
+    public final ExchangeLog log;
     private final String brokerUrl;
     private final String username;
     private final String password;
@@ -70,7 +74,7 @@ final class MqttTerminal implements MqttCallbackExtended {
     private final List<OperationListener> operationListeners = new CopyOnWriteArrayList<>();
 
     volatile boolean autoRegister = true;
-    volatile boolean autoConfirm = true;
+    public volatile boolean autoConfirm = true;
     volatile String confirmStatus = "SUCCESS";
 
     private final AtomicBoolean confirmInFlight = new AtomicBoolean();
@@ -82,7 +86,7 @@ final class MqttTerminal implements MqttCallbackExtended {
     private volatile String lastEvent = "";
     private volatile ScheduledFuture<?> echoTask;
 
-    MqttTerminal(Identity id, String brokerUrl, String username, String password, String topicPrefix, int qos,
+    public MqttTerminal(Identity id, String brokerUrl, String username, String password, String topicPrefix, int qos,
                  int keepAlive, int connectTimeout, String clientIdPrefix, ExchangeLog log,
                  ScheduledExecutorService exec) throws MqttException {
         this.id = id;
@@ -102,7 +106,7 @@ final class MqttTerminal implements MqttCallbackExtended {
     // ------------------------------------------------------------------ connection
 
     /** Blocking; call off the UI thread. */
-    Exchange connect() {
+    public Exchange connect() {
         Map<String, String> h = new LinkedHashMap<>();
         h.put("Client-Id", client.getClientId());
         h.put("Keep-Alive", keepAlive + "s");
@@ -135,7 +139,7 @@ final class MqttTerminal implements MqttCallbackExtended {
         return ex;
     }
 
-    Exchange disconnect() {
+    public Exchange disconnect() {
         stopAutoEcho();
         Exchange ex = log.add(new Exchange(Exchange.Kind.MQTT, "DISCONNECT", brokerUrl,
                 Map.of("Client-Id", client.getClientId()), ""));
@@ -154,7 +158,7 @@ final class MqttTerminal implements MqttCallbackExtended {
         return ex;
     }
 
-    void close() {
+    public void close() {
         stopAutoEcho();
         try {
             if (client.isConnected()) {
@@ -166,7 +170,7 @@ final class MqttTerminal implements MqttCallbackExtended {
         }
     }
 
-    void startAutoEcho(int intervalSec) {
+    public void startAutoEcho(int intervalSec) {
         stopAutoEcho();
         long jitter = ThreadLocalRandom.current().nextLong(Math.max(1, intervalSec)) + 1;
         echoTask = exec.scheduleWithFixedDelay(() -> {
@@ -176,7 +180,7 @@ final class MqttTerminal implements MqttCallbackExtended {
         }, jitter, intervalSec, TimeUnit.SECONDS);
     }
 
-    void stopAutoEcho() {
+    public void stopAutoEcho() {
         ScheduledFuture<?> t = echoTask;
         if (t != null) {
             t.cancel(false);
@@ -201,7 +205,7 @@ final class MqttTerminal implements MqttCallbackExtended {
         return Json.pretty(body);
     }
 
-    static String echoPayload(Identity id) {
+    public static String echoPayload(Identity id) {
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("serialNumber", id.serial());
         body.put("imeiNumber", id.imei());
@@ -222,11 +226,11 @@ final class MqttTerminal implements MqttCallbackExtended {
         return Json.pretty(body);
     }
 
-    Exchange register() {
+    public Exchange register() {
         return publish(topic("create"), registerPayload(id), qos, false);
     }
 
-    Exchange echo() {
+    public Exchange echo() {
         return publish(topic("message"), echoPayload(id), qos, false);
     }
 
@@ -234,12 +238,12 @@ final class MqttTerminal implements MqttCallbackExtended {
      * Publishes the payload as given. Blocking until the broker acks (QoS 1+), so never call it on
      * Paho's callback thread. The returned exchange completes when the reply arrives or times out.
      */
-    Exchange publish(String topic, String payload, int q, boolean retained) {
+    public Exchange publish(String topic, String payload, int q, boolean retained) {
         return publish(topic, payload, q, retained, log);
     }
 
     /** As above, recording the exchange in {@code into} (e.g. the Push tab's history) instead of this terminal's. */
-    Exchange publish(String topic, String payload, int q, boolean retained, ExchangeLog into) {
+    public Exchange publish(String topic, String payload, int q, boolean retained, ExchangeLog into) {
         Map<String, String> h = new LinkedHashMap<>();
         h.put("Broker", brokerUrl);
         h.put("Client-Id", client.getClientId());
@@ -449,11 +453,11 @@ final class MqttTerminal implements MqttCallbackExtended {
         operationListeners.add(l);
     }
 
-    boolean isConnected() {
+    public boolean isConnected() {
         return client.isConnected();
     }
 
-    boolean isRegistered() {
+    public boolean isRegistered() {
         return registered;
     }
 
@@ -461,15 +465,15 @@ final class MqttTerminal implements MqttCallbackExtended {
         return subscribed;
     }
 
-    long echoSent() {
+    public long echoSent() {
         return echoSent.get();
     }
 
-    long echoReceived() {
+    public long echoReceived() {
         return echoReceived.get();
     }
 
-    String lastEvent() {
+    public String lastEvent() {
         return lastEvent;
     }
 
@@ -477,7 +481,7 @@ final class MqttTerminal implements MqttCallbackExtended {
         return brokerUrl;
     }
 
-    int qos() {
+    public int qos() {
         return qos;
     }
 

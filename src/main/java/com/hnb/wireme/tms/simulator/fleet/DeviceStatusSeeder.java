@@ -1,4 +1,6 @@
-package com.hnb.wireme.tms.simulator;
+package com.hnb.wireme.tms.simulator.fleet;
+
+import com.hnb.wireme.tms.simulator.common.TerminalLog;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -27,7 +29,7 @@ import java.util.Optional;
  * Idempotent: the INSERT is guarded by "WHERE NOT EXISTS", so re-running this
  * against an already-seeded device is a no-op.
  */
-final class DeviceStatusSeeder {
+public final class DeviceStatusSeeder {
 
     private static final String ANY_STATUS_CODE_SQL = "SELECT STATUS_CODE FROM STATUS FETCH FIRST 1 ROWS ONLY";
 

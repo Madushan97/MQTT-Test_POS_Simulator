@@ -1,4 +1,12 @@
-package com.hnb.wireme.tms.simulator;
+package com.hnb.wireme.tms.simulator.mqtt;
+
+import com.hnb.wireme.tms.simulator.common.Exchange;
+import com.hnb.wireme.tms.simulator.common.ExchangeLog;
+import com.hnb.wireme.tms.simulator.common.HttpExchanger;
+import com.hnb.wireme.tms.simulator.common.Json;
+import com.hnb.wireme.tms.simulator.config.SimulatorConfig;
+import com.hnb.wireme.tms.simulator.ui.ExchangeConsole;
+import com.hnb.wireme.tms.simulator.ui.FormPanel;
 
 import javax.swing.ButtonGroup;
 import javax.swing.DefaultListModel;
@@ -47,7 +55,7 @@ import java.util.concurrent.ScheduledExecutorService;
  *
  * The device side uses the Single terminal tab's connection.
  */
-final class PushNotificationTab extends JPanel {
+public final class PushNotificationTab extends JPanel {
 
     private static final DateTimeFormatter TIME = DateTimeFormatter.ofPattern("HH:mm:ss");
 
@@ -97,7 +105,7 @@ final class PushNotificationTab extends JPanel {
     private final JSpinner pageSize = new JSpinner(new SpinnerNumberModel(10, 1, 100, 1));
     private final JLabel deviceState = new JLabel(" ");
 
-    PushNotificationTab(SimulatorConfig cfg, ScheduledExecutorService exec, SingleTerminalTab single) {
+    public PushNotificationTab(SimulatorConfig cfg, ScheduledExecutorService exec, SingleTerminalTab single) {
         super(new BorderLayout());
         this.exec = exec;
         this.single = single;

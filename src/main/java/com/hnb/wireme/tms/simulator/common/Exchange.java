@@ -1,4 +1,4 @@
-package com.hnb.wireme.tms.simulator;
+package com.hnb.wireme.tms.simulator.common;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -10,17 +10,17 @@ import java.util.Map;
  * "response" being the TMS's reply on the matching ack/response topic), an unsolicited MQTT message
  * (response only), or a DB statement. Created pending and completed exactly once.
  */
-final class Exchange {
+public final class Exchange {
 
-    enum Kind { HTTP, MQTT, DB }
+    public enum Kind { HTTP, MQTT, DB }
 
     private static final DateTimeFormatter TIME = DateTimeFormatter.ofPattern("HH:mm:ss.SSS");
 
-    final Kind kind;
-    final String method;
-    final String url;
-    final Map<String, String> requestHeaders;
-    final String requestBody;
+    public final Kind kind;
+    public final String method;
+    public final String url;
+    public final Map<String, String> requestHeaders;
+    public final String requestBody;
     final LocalDateTime at = LocalDateTime.now();
     private final long startNanos = System.nanoTime();
 
@@ -32,7 +32,7 @@ final class Exchange {
     private volatile long durationMs = -1;
     private volatile Runnable onChange = () -> { };
 
-    Exchange(Kind kind, String method, String url, Map<String, String> requestHeaders, String requestBody) {
+    public Exchange(Kind kind, String method, String url, Map<String, String> requestHeaders, String requestBody) {
         this.kind = kind;
         this.method = method;
         this.url = url;
@@ -41,7 +41,7 @@ final class Exchange {
     }
 
     /** Something that arrived without being asked for (e.g. a pushed MQTT command): response side only. */
-    static Exchange inbound(Kind kind, String url, boolean ok, String status, Map<String, String> headers, String body) {
+    public static Exchange inbound(Kind kind, String url, boolean ok, String status, Map<String, String> headers, String body) {
         Exchange e = new Exchange(kind, "RECEIVE", url, Map.of(), "");
         e.complete(ok, status, headers, body);
         e.durationMs = -1;
@@ -49,7 +49,7 @@ final class Exchange {
     }
 
     /** First call wins; later ones (e.g. a reply racing its timeout) are ignored. */
-    synchronized boolean complete(boolean ok, String status, Map<String, String> headers, String body) {
+    public synchronized boolean complete(boolean ok, String status, Map<String, String> headers, String body) {
         if (done) {
             return false;
         }
@@ -64,7 +64,7 @@ final class Exchange {
     }
 
     /** Interim status while still pending (e.g. "published, waiting for reply"). */
-    synchronized void progress(String status) {
+    public synchronized void progress(String status) {
         if (!done) {
             this.status = status;
             onChange.run();
@@ -75,31 +75,31 @@ final class Exchange {
         this.onChange = r;
     }
 
-    boolean done() {
+    public boolean done() {
         return done;
     }
 
-    boolean ok() {
+    public boolean ok() {
         return ok;
     }
 
-    String status() {
+    public String status() {
         return status;
     }
 
-    Map<String, String> responseHeaders() {
+    public Map<String, String> responseHeaders() {
         return responseHeaders;
     }
 
-    String responseBody() {
+    public String responseBody() {
         return responseBody;
     }
 
-    long durationMs() {
+    public long durationMs() {
         return durationMs;
     }
 
-    String time() {
+    public String time() {
         return TIME.format(at);
     }
 

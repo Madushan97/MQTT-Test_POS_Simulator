@@ -1,4 +1,4 @@
-package com.hnb.wireme.tms.simulator;
+package com.hnb.wireme.tms.simulator.sale;
 
 import com.google.gson.Gson;
 
@@ -31,7 +31,7 @@ import java.util.UUID;
  * chars here) is inferred from that sample and not documented anywhere, so if
  * core validates it more strictly this will need adjusting.
  */
-final class CoreSaleClient {
+public final class CoreSaleClient {
 
     private static final DateTimeFormatter CORE_DATETIME = DateTimeFormatter.ofPattern("yyyyMMddHHmmss");
 
@@ -43,14 +43,14 @@ final class CoreSaleClient {
     private final long amountMax;
     private final String currency;
 
-    CoreSaleClient(String url, long amountMin, long amountMax, String currency) {
+    public CoreSaleClient(String url, long amountMin, long amountMax, String currency) {
         this.url = url;
         this.amountMin = amountMin;
         this.amountMax = amountMax;
         this.currency = currency;
     }
 
-    record SaleResult(boolean ok, int httpStatus, String requestJson, String body, String error) {
+    public record SaleResult(boolean ok, int httpStatus, String requestJson, String body, String error) {
     }
 
     /** The parts of a sale a caller may vary; everything else is generated per request. */
@@ -58,7 +58,7 @@ final class CoreSaleClient {
                     String paymentMode, String entryMode, String pan, String expDate) {
     }
 
-    SaleResult sendSale(String serialNo, String terminalId, String merchantId, double lat, double lng) {
+    public SaleResult sendSale(String serialNo, String terminalId, String merchantId, double lat, double lng) {
         long amount = amountMin + random.nextLong(Math.max(1, amountMax - amountMin + 1));
         // synthetic masked test PAN — not a real card
         SaleSpec spec = new SaleSpec("sale", amount, 0, currency, "master", "card", "tap", "532016XXXXXX1166", "2701");

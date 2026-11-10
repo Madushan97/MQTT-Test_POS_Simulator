@@ -77,9 +77,9 @@ Point your local TMS's `tms.push.mqtt.broker-url` (`PUSH_MQTT_BROKER_URL`) at th
 
 ```bash
 mvn package
-java -cp target/pos-simulator.jar com.hnb.wireme.tms.simulator.PosSimulator                    # uses ./config.properties
-java -cp target/pos-simulator.jar com.hnb.wireme.tms.simulator.PosSimulator other.properties
-java -Dterminal.serial-number=SN0002 -cp target/pos-simulator.jar com.hnb.wireme.tms.simulator.PosSimulator   # override one key
+java -cp target/pos-simulator.jar com.hnb.wireme.tms.simulator.mqtt.PosSimulator                    # uses ./config.properties
+java -cp target/pos-simulator.jar com.hnb.wireme.tms.simulator.mqtt.PosSimulator other.properties
+java -Dterminal.serial-number=SN0002 -cp target/pos-simulator.jar com.hnb.wireme.tms.simulator.mqtt.PosSimulator   # override one key
 ```
 
 Edit `config.properties` to change serial number, IMEI, merchantId, terminalId, broker, topic prefix, intervals.
@@ -132,7 +132,7 @@ Set `hwfail.auto-interval.seconds=N` to report one random failure every N second
 One-shot run with no broker (load codes → POST N → GET to read them back; exits non-zero on failure):
 
 ```bash
-java -cp target/pos-simulator.jar com.hnb.wireme.tms.simulator.HardwareFailureSender config.properties 5
+java -cp target/pos-simulator.jar com.hnb.wireme.tms.simulator.hardwarefailure.HardwareFailureSender config.properties 5
 ```
 
 ## Notes
@@ -152,8 +152,8 @@ terminal at a time.
 
 ```bash
 mvn package
-java -cp target/pos-simulator.jar com.hnb.wireme.tms.simulator.FleetSimulator
-java -cp target/pos-simulator.jar com.hnb.wireme.tms.simulator.FleetSimulator other-fleet.properties
+java -cp target/pos-simulator.jar com.hnb.wireme.tms.simulator.fleet.FleetSimulator
+java -cp target/pos-simulator.jar com.hnb.wireme.tms.simulator.fleet.FleetSimulator other-fleet.properties
 ```
 
 Edit `fleet-config.properties` — DB connection, fleet size (50-100), broker, intervals, churn

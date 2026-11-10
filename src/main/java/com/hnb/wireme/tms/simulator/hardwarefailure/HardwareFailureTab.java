@@ -1,4 +1,13 @@
-package com.hnb.wireme.tms.simulator;
+package com.hnb.wireme.tms.simulator.hardwarefailure;
+
+import com.hnb.wireme.tms.simulator.common.Exchange;
+import com.hnb.wireme.tms.simulator.common.ExchangeLog;
+import com.hnb.wireme.tms.simulator.common.HttpExchanger;
+import com.hnb.wireme.tms.simulator.common.Json;
+import com.hnb.wireme.tms.simulator.config.SimulatorConfig;
+import com.hnb.wireme.tms.simulator.mqtt.MqttTerminal;
+import com.hnb.wireme.tms.simulator.ui.ExchangeConsole;
+import com.hnb.wireme.tms.simulator.ui.FormPanel;
 
 import javax.swing.DefaultComboBoxModel;
 import javax.swing.JButton;
@@ -29,7 +38,7 @@ import java.util.function.Supplier;
  * hardware-failure-transactions) and read stored ones back (GET hardware-failure-transactions).
  * Codes offered come only from the catalogue; a code typed by hand is sent as typed.
  */
-final class HardwareFailureTab extends JPanel {
+public final class HardwareFailureTab extends JPanel {
 
     private record Code(HardwareFailureClient.ErrorCode c) {
         @Override
@@ -56,7 +65,7 @@ final class HardwareFailureTab extends JPanel {
     private final JSpinner pageSize = new JSpinner(new SpinnerNumberModel(10, 1, 100, 1));
     private final JLabel catalogueState = new JLabel("catalogue not loaded");
 
-    HardwareFailureTab(SimulatorConfig cfg, ScheduledExecutorService exec, Supplier<MqttTerminal.Identity> singleIdentity) {
+    public HardwareFailureTab(SimulatorConfig cfg, ScheduledExecutorService exec, Supplier<MqttTerminal.Identity> singleIdentity) {
         super(new BorderLayout());
         this.exec = exec;
         baseUrl.setText(cfg.get("tms.base-url", "http://localhost:8081/api/v1"));

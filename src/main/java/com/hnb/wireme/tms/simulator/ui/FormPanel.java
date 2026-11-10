@@ -1,4 +1,4 @@
-package com.hnb.wireme.tms.simulator;
+package com.hnb.wireme.tms.simulator.ui;
 
 import javax.swing.BorderFactory;
 import javax.swing.JComboBox;
@@ -13,16 +13,16 @@ import java.awt.GridBagLayout;
 import java.awt.Insets;
 
 /** Label/field rows with section headings, top-aligned — the left-hand form of each tab. */
-final class FormPanel extends JPanel {
+public final class FormPanel extends JPanel {
 
     private int row;
 
-    FormPanel() {
+    public FormPanel() {
         super(new GridBagLayout());
         setBorder(BorderFactory.createEmptyBorder(6, 8, 6, 8));
     }
 
-    FormPanel section(String title) {
+    public FormPanel section(String title) {
         JLabel l = new JLabel(title);
         l.setFont(l.getFont().deriveFont(Font.BOLD, 13f));
         GridBagConstraints c = constraints(0, row++);
@@ -32,7 +32,7 @@ final class FormPanel extends JPanel {
         return this;
     }
 
-    FormPanel row(String label, JComponent field) {
+    public FormPanel row(String label, JComponent field) {
         if (field instanceof JTextField t) {
             t.setColumns(12); // otherwise a long value (a DB host, a URL) sets the whole form's width
         } else if (field instanceof JComboBox<?> c) {
@@ -48,7 +48,7 @@ final class FormPanel extends JPanel {
         return this;
     }
 
-    FormPanel full(JComponent c) {
+    public FormPanel full(JComponent c) {
         GridBagConstraints gc = constraints(0, row++);
         gc.gridwidth = 2;
         gc.weightx = 1;
@@ -57,12 +57,12 @@ final class FormPanel extends JPanel {
     }
 
     /** Small wrapped help text; fixed width so it never widens the form. */
-    FormPanel note(String html) {
+    public FormPanel note(String html) {
         return full(new JLabel("<html><body style='width:300px'><small>" + html + "</small></body></html>"));
     }
 
     /** Pushes the rows to the top. */
-    FormPanel end() {
+    public FormPanel end() {
         GridBagConstraints c = constraints(0, row++);
         c.weighty = 1;
         add(new JPanel(), c);

@@ -1,4 +1,6 @@
-package com.hnb.wireme.tms.simulator;
+package com.hnb.wireme.tms.simulator.fleet;
+
+import com.hnb.wireme.tms.simulator.common.TerminalLog;
 
 import com.google.gson.Gson;
 import org.eclipse.paho.client.mqttv3.IMqttDeliveryToken;
@@ -29,7 +31,7 @@ import java.util.concurrent.atomic.AtomicLong;
  * SUCCESS status. Identity (serialNo/IMEI/terminalId/merchantId) comes from a
  * real DB row (DeviceDbClient), so register should succeed (status 000).
  */
-final class FleetDevice implements MqttCallbackExtended {
+public final class FleetDevice implements MqttCallbackExtended {
 
     private static final String ECHO = "ECHO";
 

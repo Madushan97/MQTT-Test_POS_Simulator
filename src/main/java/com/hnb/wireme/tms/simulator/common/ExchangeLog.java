@@ -1,4 +1,4 @@
-package com.hnb.wireme.tms.simulator;
+package com.hnb.wireme.tms.simulator.common;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -10,17 +10,17 @@ import java.util.concurrent.CopyOnWriteArrayList;
  * A bounded, thread-safe history of exchanges (oldest dropped first), with change listeners. One per
  * UI tab, and one per simulated device in the bulk fleet, so a fleet run can't grow without limit.
  */
-final class ExchangeLog {
+public final class ExchangeLog {
 
     private final int capacity;
     private final Deque<Exchange> items = new ArrayDeque<>();
     private final List<Runnable> listeners = new CopyOnWriteArrayList<>();
 
-    ExchangeLog(int capacity) {
+    public ExchangeLog(int capacity) {
         this.capacity = capacity;
     }
 
-    Exchange add(Exchange e) {
+    public Exchange add(Exchange e) {
         e.onChange(this::fire);
         synchronized (items) {
             items.addFirst(e);
@@ -33,24 +33,24 @@ final class ExchangeLog {
     }
 
     /** Newest first. */
-    List<Exchange> snapshot() {
+    public List<Exchange> snapshot() {
         synchronized (items) {
             return new ArrayList<>(items);
         }
     }
 
-    void clear() {
+    public void clear() {
         synchronized (items) {
             items.clear();
         }
         fire();
     }
 
-    void addListener(Runnable r) {
+    public void addListener(Runnable r) {
         listeners.add(r);
     }
 
-    void removeListener(Runnable r) {
+    public void removeListener(Runnable r) {
         listeners.remove(r);
     }
 

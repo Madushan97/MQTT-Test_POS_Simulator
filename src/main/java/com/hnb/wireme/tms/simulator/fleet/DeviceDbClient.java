@@ -1,4 +1,4 @@
-package com.hnb.wireme.tms.simulator;
+package com.hnb.wireme.tms.simulator.fleet;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -33,7 +33,7 @@ import java.util.List;
  *
  * Read-only: one SELECT, no writes, no TMS backend involved.
  */
-final class DeviceDbClient {
+public final class DeviceDbClient {
 
     record DbDevice(long deviceId, String serialNo, String emiNo, String terminalId, String merchantId,
                      Double lat, Double lng) {

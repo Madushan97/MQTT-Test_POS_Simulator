@@ -1,4 +1,4 @@
-package com.hnb.wireme.tms.simulator;
+package com.hnb.wireme.tms.simulator.hardwarefailure;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonArray;
@@ -31,27 +31,27 @@ import java.util.Map;
  * where base = tms.base-url + "/advanced-insights/tms". This is plain HTTP, not MQTT: the TMS exposes
  * hardware failures as a REST endpoint only — there is no push-device topic for them.
  */
-final class HardwareFailureClient {
+public final class HardwareFailureClient {
 
-    record ErrorCode(String code, String description, String subCategory, String stage) {
+    public record ErrorCode(String code, String description, String subCategory, String stage) {
     }
 
-    record Result(boolean ok, int httpStatus, String requestJson, String body, String error) {
+    public record Result(boolean ok, int httpStatus, String requestJson, String body, String error) {
     }
 
     private final Gson gson = new Gson();
     private final String base;
 
-    HardwareFailureClient(String tmsBaseUrl) {
+    public HardwareFailureClient(String tmsBaseUrl) {
         this.base = stripSlash(tmsBaseUrl) + "/advanced-insights/tms";
     }
 
-    String base() {
+    public String base() {
         return base;
     }
 
     /** The hardware codes from ADVANCED_INSIGHTS_FAILURE_ERROR_CODES via the TMS list endpoint. */
-    List<ErrorCode> fetchErrorCodes(String category) throws IOException {
+    public List<ErrorCode> fetchErrorCodes(String category) throws IOException {
         String url = base + "/hardware-failure-error-codes"
                 + (category == null || category.isBlank() ? "" : "?category=" + enc(category));
         Result r = send(HttpRequest.newBuilder(URI.create(url)).GET(), null);
@@ -82,7 +82,7 @@ final class HardwareFailureClient {
     }
 
     /** POST one failure. */
-    Result report(String deviceSerial, String errorCode, String terminalId, String merchantId) {
+    public Result report(String deviceSerial, String errorCode, String terminalId, String merchantId) {
         String json = gson.toJson(reportBody(deviceSerial, errorCode, terminalId, merchantId));
         return send(HttpRequest.newBuilder(URI.create(base + "/hardware-failure-transactions"))
                 .header("Content-Type", "application/json")
@@ -90,14 +90,14 @@ final class HardwareFailureClient {
     }
 
     /** Newest-first page of stored failures for one device, with the server's per-code breakdown. */
-    Result list(String deviceSerial, int size) {
+    public Result list(String deviceSerial, int size) {
         String url = base + "/hardware-failure-transactions?size=" + size
                 + (deviceSerial == null || deviceSerial.isBlank() ? "" : "&deviceSerial=" + enc(deviceSerial));
         return send(HttpRequest.newBuilder(URI.create(url)).GET(), null);
     }
 
     /** One-line summary of a list() response: totals, per-code counts, latest rows. */
-    String summarizeList(Result r) {
+    public String summarizeList(Result r) {
         if (!r.ok()) {
             return describe(r);
         }
@@ -126,7 +126,7 @@ final class HardwareFailureClient {
         return sb.toString();
     }
 
-    static String describe(Result r) {
+    public static String describe(Result r) {
         return r.error() != null ? "ERROR " + r.error() : "HTTP " + r.httpStatus() + " " + truncate(r.body());
     }
 
