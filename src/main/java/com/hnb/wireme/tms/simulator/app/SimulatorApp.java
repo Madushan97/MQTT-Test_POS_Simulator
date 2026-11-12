@@ -6,6 +6,7 @@ import com.hnb.wireme.tms.simulator.hardwarefailure.HardwareFailureTab;
 import com.hnb.wireme.tms.simulator.mqtt.PushNotificationTab;
 import com.hnb.wireme.tms.simulator.mqtt.SingleTerminalTab;
 import com.hnb.wireme.tms.simulator.sale.SaleTab;
+import com.hnb.wireme.tms.simulator.settlement.SettlementTab;
 
 import javax.swing.JFrame;
 import javax.swing.JTabbedPane;
@@ -21,7 +22,8 @@ import java.util.concurrent.ScheduledExecutorService;
  *
  *   Single terminal    one terminal on the MQTT push channel
  *   Bulk fleet         many terminals at once (from the DB or a pasted list)
- *   Sale               transactions to WireMe core (sale, void, preauth, ...)
+ *   Sale               transactions to WireMe core (sale, void, preauth, ...), into the open batch
+ *   Settlement         settle a terminal's open batches (totals looked up in the DB)
  *   Hardware failures  TMS hardware-failure REST endpoints
  *   Push notifications queue a push operation (REST), receive and confirm it (MQTT), check its status
  *
@@ -51,7 +53,11 @@ public final class SimulatorApp {
             JTabbedPane tabs = new JTabbedPane();
             tabs.addTab("Single terminal", singleTab);
             tabs.addTab("Bulk fleet", new BulkFleetTab(fleet, exec));
-            tabs.addTab("Sale", new SaleTab(single, fleet, singleTab::identity));
+            SaleTab saleTab = new SaleTab(single, fleet, singleTab::identity);
+            SettlementTab settlementTab = new SettlementTab(single, fleet, exec, singleTab::identity);
+            settlementTab.setOnSettled(saleTab::batchesSettled);
+            tabs.addTab("Sale", saleTab);
+            tabs.addTab("Settlement", settlementTab);
             tabs.addTab("Hardware failures", new HardwareFailureTab(single, exec, singleTab::identity));
             tabs.addTab("Push notifications", new PushNotificationTab(single, exec, singleTab));
 

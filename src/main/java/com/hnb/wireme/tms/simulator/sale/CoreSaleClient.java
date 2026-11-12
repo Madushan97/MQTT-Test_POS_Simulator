@@ -138,7 +138,7 @@ public final class CoreSaleClient {
         return s == null ? "" : s.length() > 300 ? s.substring(0, 300) + "..." : s;
     }
 
-    private static String hex64(SecureRandom random) {
+    public static String hex64(SecureRandom random) {
         byte[] bytes = new byte[32];
         random.nextBytes(bytes);
         StringBuilder sb = new StringBuilder(64);

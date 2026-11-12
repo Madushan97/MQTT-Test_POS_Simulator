@@ -72,6 +72,9 @@ public final class SaleTab extends JPanel {
     private final JTextField respCode = new JTextField("05");
     private final DefaultComboBoxModel<Object> originals = new DefaultComboBoxModel<>(new Object[]{NONE});
     private final JComboBox<Object> original = new JComboBox<>(originals);
+    /** The terminal's open batch: every sale goes into it until it is settled, as on a real POS. */
+    private final JTextField batchNo = new JTextField();
+    private final JTextField batchKey = new JTextField();
 
     public SaleTab(SimulatorConfig singleCfg, SimulatorConfig fleetCfg, Supplier<MqttTerminal.Identity> singleIdentity) {
         super(new BorderLayout());
@@ -80,6 +83,8 @@ public final class SaleTab extends JPanel {
         serial.setText(singleCfg.get("terminal.serial-number", ""));
         tid.setText(singleCfg.get("terminal.terminal-id", ""));
         mid.setText(singleCfg.get("terminal.merchant-id", ""));
+        batchNo.setText(String.valueOf(1 + random.nextInt(999)));
+        batchKey.setText(newBatchKey());
         respCode.setEnabled(false);
         outcome.addActionListener(e -> respCode.setEnabled("Declined".equals(outcome.getSelectedItem())));
         original.addActionListener(e -> {
@@ -94,12 +99,19 @@ public final class SaleTab extends JPanel {
             serial.setText(id.serial());
             tid.setText(id.terminalId());
             mid.setText(id.merchantId());
+            batchKey.setText(newBatchKey()); // another terminal, another batch
         });
         JButton randomAmount = new JButton("Random");
         randomAmount.addActionListener(e -> amount.setText(String.valueOf(100 + random.nextInt(250_000))));
         JPanel amountRow = new JPanel(new BorderLayout(4, 0));
         amountRow.add(amount, BorderLayout.CENTER);
         amountRow.add(randomAmount, BorderLayout.EAST);
+        JButton newBatch = new JButton("New batch");
+        newBatch.setToolTipText("Close this batch on the POS side: next batch number, new batch key");
+        newBatch.addActionListener(e -> openNextBatch());
+        JPanel batchRow = new JPanel(new BorderLayout(4, 0));
+        batchRow.add(batchNo, BorderLayout.CENTER);
+        batchRow.add(newBatch, BorderLayout.EAST);
 
         JButton build = new JButton("Build request");
         build.setToolTipText("Fill the editor (fresh ids each time) without sending");
@@ -120,6 +132,8 @@ public final class SaleTab extends JPanel {
                 .row("Merchant ID", mid)
                 .row("Lat", lat)
                 .row("Lng", lng)
+                .row("Batch no", batchRow)
+                .row("Batch key", batchKey)
                 .section("Transaction")
                 .row("Type (transType)", transType)
                 .row("Amount", amountRow)
@@ -171,6 +185,8 @@ public final class SaleTab extends JPanel {
         Map<String, Object> body = CoreSaleClient.saleBody(serial.getText().trim(), tid.getText().trim(),
                 mid.getText().trim(), Double.parseDouble(lat.getText().trim()), Double.parseDouble(lng.getText().trim()),
                 spec, random);
+        body.put("batchNo", Long.parseLong(batchNo.getText().trim()));
+        body.put("batchKey", batchKey.getText().trim());
         if ("Declined".equals(outcome.getSelectedItem())) {
             body.put("respCode", respCode.getText().trim());
         }
@@ -183,6 +199,31 @@ public final class SaleTab extends JPanel {
             body.put("oriAuthCode", o.authCode());
         }
         return body;
+    }
+
+    /** The Settlement tab settled these batches; if one is this tab's open batch, start the next. */
+    public void batchesSettled(java.util.Set<String> keys) {
+        if (keys.contains(batchKey.getText().trim())) {
+            openNextBatch();
+        }
+    }
+
+    private void openNextBatch() {
+        long next;
+        try {
+            next = Long.parseLong(batchNo.getText().trim()) % 999 + 1;
+        } catch (NumberFormatException e) {
+            next = 1;
+        }
+        batchNo.setText(String.valueOf(next));
+        batchKey.setText(newBatchKey());
+    }
+
+    /** Same shape as a real terminal's key: serial_openedAt_random, e.g. 1851217565_20241211141937_64133. */
+    private String newBatchKey() {
+        return serial.getText().trim() + "_"
+                + java.time.LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyyMMddHHmmss"))
+                + "_" + (10000 + random.nextInt(90000));
     }
 
     /** Taken from the request as actually sent, so hand-edited payloads are remembered correctly too. */
